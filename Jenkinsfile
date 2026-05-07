@@ -19,15 +19,16 @@ spec:
     }
     environment {
         ECR_REPO = "482745810990.dkr.ecr.us-west-2.amazonaws.com/django-app"
-        REGION   = "us-west-2"
     }
     stages {
         stage('Build and Push to ECR') {
             steps {
                 container('kaniko') {
                     sh """
+                        # Створюємо конфіг, який каже Kaniko використовувати вбудований хелпер для AWS
                         mkdir -p /kaniko/.docker
                         echo '{"credsStore":"ecr-login"}' > /kaniko/.docker/config.json
+                        
                         /kaniko/executor --context ${WORKSPACE} --dockerfile ${WORKSPACE}/Dockerfile --destination ${ECR_REPO}:${BUILD_NUMBER}
                     """
                 }
