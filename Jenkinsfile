@@ -26,11 +26,15 @@ spec:
             steps {
                 container('kaniko') {
                     sh """
-                        # Створюємо папку для конфігу
-                        mkdir -p /kaniko/.docker
+                        # Отримуємо токен авторизації AWS та записуємо його у форматі Docker
+                        # Ми використовуємо стандартний вивід aws ecr get-login-password
                         
-                        # Вказуємо Kaniko використовувати AWS helper для авторизації
-                        echo '{"credsStore":"ecr-login"}' > /kaniko/.docker/config.json
+                        export AWS_REGION=${REGION}
+                        TOKEN=\$(aws ecr get-login-password --region ${REGION})
+                        AUTH=\$(echo -n "AWS:\$TOKEN" | base64 | tr -d '\n')
+                        
+                        mkdir -p /kaniko/.docker
+                        echo "{\"auths\":{\"${ECR_REPO.split('/')[0]}\":{\"auth\":\"\$AUTH\"}}}" > /kaniko/.docker/config.json
                         
                         # Запускаємо збірку
                         /kaniko/executor --context ${WORKSPACE} \
