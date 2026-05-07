@@ -5,29 +5,15 @@ pipeline {
 apiVersion: v1
 kind: Pod
 spec:
-  hostNetwork: true
   containers:
   - name: kaniko
     image: gcr.io/kaniko-project/executor:debug
     command: ["sleep"]
     args: ["9999999"]
-    volumeMounts:
-    - name: docker-config
-      mountPath: /kaniko/.docker
-  - name: aws-cli
-    image: amazon/aws-cli
-    command: ["sleep"]
-    args: ["9999999"]
-    volumeMounts:
-    - name: docker-config
-      mountPath: /root/.docker
   - name: jgit
     image: alpine/git
     command: ["sleep"]
     args: ["9999999"]
-  volumes:
-  - name: docker-config
-    emptyDir: {}
 """
         }
     }
@@ -38,14 +24,12 @@ spec:
     stages {
         stage('Build and Push to ECR') {
             steps {
-                container('aws-cli') {
-                    sh """
-                        TOKEN=\$(aws ecr get-login-password --region ${REGION})
-                        echo "{\\"auths\\":{\\"${ECR_REPO.split('/')[0]}\\":{\\"auth\\":\\"\$(echo -n AWS:\$TOKEN | base64 | tr -d '\n')\\"}}}" > /root/.docker/config.json
-                    """
-                }
                 container('kaniko') {
-                    sh "/kaniko/executor --context ${WORKSPACE} --dockerfile ${WORKSPACE}/Dockerfile --destination ${ECR_REPO}:${BUILD_NUMBER}"
+                    sh """
+                        mkdir -p /kaniko/.docker
+                        echo '{"credsStore":"ecr-login"}' > /kaniko/.docker/config.json
+                        /kaniko/executor --context ${WORKSPACE} --dockerfile ${WORKSPACE}/Dockerfile --destination ${ECR_REPO}:${BUILD_NUMBER}
+                    """
                 }
             }
         }
