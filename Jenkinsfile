@@ -25,12 +25,22 @@ spec:
         stage('Build and Push to ECR') {
             steps {
                 container('kaniko') {
-                   
-                    sh "/kaniko/executor --context ${WORKSPACE} --dockerfile ${WORKSPACE}/Dockerfile --destination ${ECR_REPO}:${BUILD_NUMBER}"
+                    sh """
+                        # Створюємо папку для конфігу
+                        mkdir -p /kaniko/.docker
+                        
+                        # Вказуємо Kaniko використовувати AWS helper для авторизації
+                        echo '{"credsStore":"ecr-login"}' > /kaniko/.docker/config.json
+                        
+                        # Запускаємо збірку
+                        /kaniko/executor --context ${WORKSPACE} \
+                                         --dockerfile ${WORKSPACE}/Dockerfile \
+                                         --destination ${ECR_REPO}:${BUILD_NUMBER}
+                    """
                 }
             }
         }
-       stage('Update Helm Tag in Git') {
+        stage('Update Helm Tag in Git') {
             steps {
                 container('jgit') {
                     withCredentials([usernamePassword(credentialsId: 'github-token', passwordVariable: 'GIT_PASSWORD', usernameVariable: 'GIT_USERNAME')]) {
