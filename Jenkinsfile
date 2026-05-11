@@ -35,23 +35,30 @@ spec:
             }
         }
         stage('Update Helm Tag in Git') {
-            steps {
-                container('jgit') {
-                    withCredentials([usernamePassword(credentialsId: 'github-token', passwordVariable: 'GIT_PASSWORD', usernameVariable: 'GIT_USERNAME')]) {
-                        sh """
-                            git config --global user.email "jenkins@example.com"
-                            git config --global user.name "Jenkins CI"
-                            git clone https://${GIT_USERNAME}:${GIT_PASSWORD}@github.com/${GIT_USERNAME}/goit-devops-CI-CD.git infra-repo
-                            cd infra-repo
-                            git checkout lesson-8-9
-                            sed -i "s/tag: .*/tag: ${BUILD_NUMBER}/g" lesson-8-9/charts/django-app/values.yaml
-                            git add lesson-8-9/charts/django-app/values.yaml
-                            git commit -m "Update image tag to ${BUILD_NUMBER} [skip ci]"
-                            git push origin lesson-8-9
-                        """
-                    }
+        steps {
+            container('git') {
+                withCredentials([usernamePassword(credentialsId: 'github-token', passwordVariable: 'GIT_PASSWORD', usernameVariable: 'GIT_USERNAME')]) {
+                    sh """
+                        git config --global user.email "jenkins@example.com"
+                        git config --global user.name "Jenkins CI"
+                        
+                        # Видаляємо стару папку, якщо вона залишилася
+                        rm -rf infra-repo
+                        
+                        # Клонуємо через токен
+                        git clone https://${GIT_USERNAME}:${GIT_PASSWORD}@github.com/OlhaOs/goit-devops-CI-CD.git infra-repo
+                        
+                        cd infra-repo
+                        git checkout lesson-8-9
+                        sed -i "s/tag: .*/tag: ${BUILD_NUMBER}/g" lesson-8-9/charts/django-app/values.yaml
+                        
+                        git add .
+                        git commit -m "Update image tag to ${BUILD_NUMBER} [skip ci]"
+                        git push origin lesson-8-9
+                    """
                 }
             }
         }
+}
     }
 }
